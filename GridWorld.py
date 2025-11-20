@@ -36,7 +36,7 @@ class GridWorld:
         """获取执行动作后的下一个状态（障碍可进入）"""
         row, col = self.state_to_coord(state)
 
-        # 动作：0=右, 1=下, 2=左, 3=上
+        # 动作：0=右, 1=下, 2=左, 3=上, 4=停留
         if action == 0:
             new_row, new_col = row, col + 1
         elif action == 1:
@@ -45,6 +45,8 @@ class GridWorld:
             new_row, new_col = row, col - 1
         elif action == 3:
             new_row, new_col = row - 1, col
+        elif action == 4:
+            new_row, new_col = row, col
         else:
             new_row, new_col = row, col  # 无效动作，停在原地
 
@@ -66,7 +68,7 @@ class GridWorld:
 
         # 如果进入障碍区域
         if next_state in self.obstacles and next_state not in self.goal_states:
-            return -1
+            return -10
 
         # 如果到达目标
         if next_state in self.goal_states:
@@ -81,11 +83,6 @@ class GridWorld:
         R = np.zeros(self.n_states)
 
         for state in range(self.n_states):
-            # 终止状态
-            # if state in self.goal_states:
-            #     P[state, state] = 1.0
-            #     R[state] = 1  # 终止状态奖励为1
-            #     continue
 
             # 所有状态（包括障碍）都可以有策略
             if state not in self.action_map:
@@ -107,6 +104,22 @@ class GridWorld:
                 P[state, next_state] += prob
                 R[state] += prob * reward
 
+        return P, R
+
+    def BOE_PR(self):
+        """返回转移概率矩阵P和奖励矩阵R"""
+        P = np.zeros((self.n_states, 5,self.n_states))
+        R = np.zeros((self.n_states, 5), dtype=np.int32)  # 5个动作
+        for s in range(self.n_states):
+            # 所有状态（包括障碍）都可以有策略
+            if s not in self.action_map:
+                print(f"警告: 状态 {s} 没有定义动作，跳过该状态。")
+                continue
+            for a in range(5):  # 5个动作
+                next_state = self.get_next_state(s, a)
+                reward = self.compute_reward(s, a, next_state)
+                P[s, a, next_state] = 1.0  # 确定性转移
+                R[s, a] = reward
         return P, R
 
 
